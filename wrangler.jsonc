@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "loopapp",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+    // Serve /miniapps/<slug>/<version>/index.html as-is (no redirect to the folder URL).
+    "html_handling": "none"
+  },
+  "services": [
+    {
+      // Self-reference used by OpenNext for internal requests; must match "name".
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "loopapp"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

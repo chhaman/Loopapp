@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Respirá</title>
+<style>
+/*LOOP_BASE_CSS*/
+body { --accent: #4fb3ff; }
+.stage { position: relative; width: 260px; height: 260px; margin: 0 auto; display: grid; place-items: center; }
+.box { position: absolute; inset: 30px; border: 3px dashed var(--line); border-radius: 28px; }
+.orb { width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #bfe4ff, var(--accent)); box-shadow: 0 0 60px rgba(79,179,255,.45); transition: transform 4s ease-in-out; }
+.orb.big { transform: scale(2.1); }
+.label { position: absolute; font-weight: 800; font-size: 20px; color: #0f0d16; text-shadow: 0 1px 0 rgba(255,255,255,.4); pointer-events: none; }
+.count { text-align: center; font-size: 14px; }
+.row { display: flex; justify-content: center; gap: 10px; }
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="stage" aria-hidden="true"><div class="box"></div><div class="orb" id="orb"></div><div class="label" id="sec"></div></div>
+  <p class="count" id="phase" aria-live="polite" style="font-size:22px;font-weight:800;margin:0;text-align:center"></p>
+  <p class="count muted" id="rounds"></p>
+  <div class="row"><button class="primary" id="toggle"></button></div>
+</main>
+<script>/*LOOP_SDK*/</script>
+<script>
+(function () {
+  var t = Loop.t, el = function (id) { return document.getElementById(id); };
+  var PHASES = [
+    { label: { es: "Inhalá", en: "Breathe in" }, big: true },
+    { label: { es: "Sostené", en: "Hold" }, big: true },
+    { label: { es: "Exhalá", en: "Breathe out" }, big: false },
+    { label: { es: "Sostené", en: "Hold" }, big: false }
+  ];
+  var running = false, phase = 0, sec = 4, rounds = 0, timer = null;
+
+  function render() {
+    el("toggle").textContent = running ? t({ es: "Pausar", en: "Pause" }) : t({ es: "Empezar", en: "Start" });
+    el("phase").textContent = running ? t(PHASES[phase].label) : t({ es: "Respiración en caja", en: "Box breathing" });
+    el("sec").textContent = running ? sec : "";
+    el("rounds").textContent = rounds + " " + t(rounds === 1 ? { es: "vuelta completa", en: "full round" } : { es: "vueltas completas", en: "full rounds" });
+    el("orb").classList.toggle("big", running && PHASES[phase].big);
+  }
+
+  function tick() {
+    sec--;
+    if (sec === 0) {
+      phase = (phase + 1) % 4; sec = 4;
+      if (phase === 0) { rounds++; Loop.interaction("round"); }
+    }
+    render();
+  }
+
+  el("toggle").addEventListener("click", function () {
+    running = !running;
+    if (running) { phase = 0; sec = 4; timer = setInterval(tick, 1000); Loop.interaction("start"); }
+    else clearInterval(timer);
+    render();
+  });
+
+  render();
+  Loop.ready();
+})();
+</script>
+</body>
+</html>

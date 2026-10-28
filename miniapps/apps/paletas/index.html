@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paletas</title>
+<style>
+/*LOOP_BASE_CSS*/
+body { --accent: #7b6cf6; --on-accent: #ffffff; }
+.palette { display: flex; height: 320px; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.15); }
+.swatch { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 8px; padding: 12px 4px; transition: background .35s ease; }
+.swatch code { font: 700 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .06em; }
+.swatch button { width: 40px; height: 40px; padding: 0; background: rgba(255,255,255,.25); font-size: 16px; }
+.swatch button[aria-pressed="true"] { background: rgba(0,0,0,.35); }
+.bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.mode { font-weight: 700; }
+.hint { text-align: center; font-size: 13px; }
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="palette" id="palette"></div>
+  <div class="bar">
+    <span class="mode" id="mode" aria-live="polite"></span>
+    <button class="primary" id="gen"></button>
+  </div>
+  <p class="hint muted" id="hint"></p>
+</main>
+<script>/*LOOP_SDK*/</script>
+<script>
+(function () {
+  var t = Loop.t, el = function (id) { return document.getElementById(id); };
+  var MODES = [
+    { id: "analogous", label: { es: "Análoga", en: "Analogous" }, offsets: [-40, -20, 0, 20, 40] },
+    { id: "complementary", label: { es: "Complementaria", en: "Complementary" }, offsets: [0, 15, 180, 195, 30] },
+    { id: "triadic", label: { es: "Triádica", en: "Triadic" }, offsets: [0, 120, 240, 20, 140] },
+    { id: "split", label: { es: "Complementaria dividida", en: "Split complementary" }, offsets: [0, 150, 210, 10, 160] }
+  ];
+  var colors = [], locked = [false, false, false, false, false], modeIndex = 0;
+
+  function rand(min, max) { return min + Math.random() * (max - min); }
+  function hslToHex(h, s, l) {
+    h = ((h % 360) + 360) % 360; s /= 100; l /= 100;
+    var k = function (n) { return (n + h / 30) % 12; };
+    var a = s * Math.min(l, 1 - l);
+    var f = function (n) { return l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))); };
+    return "#" + [f(0), f(8), f(4)].map(function (x) { return Math.round(x * 255).toString(16).padStart(2, "0"); }).join("").toUpperCase();
+  }
+  function luminance(hex) {
+    var c = [1, 3, 5].map(function (i) { var v = parseInt(hex.substr(i, 2), 16) / 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); });
+    return .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+  }
+
+  function generate() {
+    modeIndex = Math.floor(Math.random() * MODES.length);
+    var mode = MODES[modeIndex], base = rand(0, 360);
+    var lights = [32, 48, 62, 74, 86].sort(function () { return Math.random() - .5; });
+    for (var i = 0; i < 5; i++) {
+      if (locked[i] && colors[i]) continue;
+      colors[i] = hslToHex(base + mode.offsets[i], rand(55, 85), lights[i]);
+    }
+    render();
+  }
+
+  function render() {
+    var root = el("palette"); root.innerHTML = "";
+    colors.forEach(function (hex, i) {
+      var fg = luminance(hex) > .45 ? "#16131F" : "#FFFFFF";
+      var s = document.createElement("div");
+      s.className = "swatch"; s.style.background = hex; s.style.color = fg;
+      var code = document.createElement("code"); code.textContent = hex;
+      var lock = document.createElement("button");
+      lock.textContent = locked[i] ? "🔒" : "🔓";
+      lock.setAttribute("aria-pressed", String(locked[i]));
+      lock.setAttribute("aria-label", t(locked[i] ? { es: "Desbloquear ", en: "Unlock " } : { es: "Bloquear ", en: "Lock " }) + hex);
+      lock.addEventListener("click", function () { locked[i] = !locked[i]; Loop.interaction("lock"); render(); });
+      s.appendChild(code); s.appendChild(lock); root.appendChild(s);
+    });
+    el("mode").textContent = t(MODES[modeIndex].label);
+  }
+
+  el("gen").textContent = t({ es: "Generar", en: "Generate" });
+  el("hint").textContent = t({ es: "Tip: también podés apretar la barra espaciadora.", en: "Tip: you can also press the space bar." });
+  el("gen").addEventListener("click", function () { generate(); Loop.interaction("generate"); });
+  document.addEventListener("keydown", function (e) {
+    if (e.code === "Space" && e.target === document.body) { e.preventDefault(); generate(); Loop.interaction("generate"); }
+  });
+
+  generate();
+  Loop.ready();
+})();
+</script>
+</body>
+</html>

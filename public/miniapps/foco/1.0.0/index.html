@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foco</title>
+<style>
+:root {
+  --bg: #fbf8f3; --surface: #ffffff; --surface-2: #f3eee6; --line: #e6dfd4;
+  --text: #16131f; --muted: #615b6e; --accent: #ff5a47; --on-accent: #16131f;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0f0d16; --surface: #1a1724; --surface-2: #242031; --line: #322d42;
+  --text: #f4f1ec; --muted: #aaa4b8; --accent: #ff6b59; --on-accent: #16131f;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 16px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  overflow: hidden; user-select: none;
+}
+button, input, select { font: inherit; color: inherit; }
+button {
+  border: 0; border-radius: 999px; padding: 12px 20px; cursor: pointer; font-weight: 700;
+  background: var(--surface-2); transition: transform .12s ease, background .2s ease;
+}
+button:active { transform: scale(.96); }
+button.primary { background: var(--accent); color: var(--on-accent); }
+:focus-visible { outline: 3px solid #7b6cf6; outline-offset: 2px; }
+.muted { color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 20px; }
+.app { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -.02em; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.ring { position: relative; width: 240px; height: 240px; margin: 0 auto; }
+.ring svg { transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 14; }
+.ring .track { stroke: var(--surface-2); }
+.ring .bar { stroke: var(--phase, var(--accent)); stroke-linecap: round; transition: stroke-dashoffset .4s linear, stroke .3s; }
+.ring .center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.time { font-size: 52px; font-weight: 800; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.phase { font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 12px; color: var(--phase, var(--accent)); }
+.row { display: flex; gap: 10px; justify-content: center; }
+.dots { display: flex; gap: 6px; justify-content: center; min-height: 10px; }
+.dots span { width: 10px; height: 10px; border-radius: 50%; background: var(--phase-focus); }
+body { --phase-focus: var(--accent); --phase-break: #22c59a; }
+</style>
+</head>
+<body>
+<main class="app" aria-live="polite">
+  <div class="ring">
+    <svg width="240" height="240" viewBox="0 0 240 240" aria-hidden="true">
+      <circle class="track" cx="120" cy="120" r="100"></circle>
+      <circle class="bar" id="bar" cx="120" cy="120" r="100"></circle>
+    </svg>
+    <div class="center">
+      <div class="phase" id="phase"></div>
+      <div class="time" id="time" role="timer">25:00</div>
+      <div class="muted" id="cycles"></div>
+    </div>
+  </div>
+  <div class="dots" id="dots" aria-hidden="true"></div>
+  <div class="row">
+    <button class="primary" id="toggle"></button>
+    <button id="skip"></button>
+    <button id="reset"></button>
+  </div>
+</main>
+<script>/* Loopapp miniapp SDK v1 — inlined into every miniapp at build time.
+ * The miniapp runs in a sandboxed iframe with an opaque origin: no cookies,
+ * no storage, no network. It can only talk to the host through postMessage. */
+(function () {
+  var params = new URLSearchParams(location.search);
+  var lang = params.get("lang") === "en" ? "en" : "es";
+  var theme = params.get("theme") === "light" ? "light" : "dark";
+  document.documentElement.lang = lang;
+  document.documentElement.setAttribute("data-theme", theme);
+
+  function send(type, extra) {
+    var msg = { source: "loop-miniapp", v: 1, type: type };
+    if (extra) for (var k in extra) msg[k] = extra[k];
+    try { window.parent.postMessage(msg, "*"); } catch { /* host unavailable */ }
+  }
+
+  window.addEventListener("error", function (e) {
+    send("error", { message: String((e && e.message) || "error").slice(0, 200) });
+  });
+  window.addEventListener("unhandledrejection", function () {
+    send("error", { message: "unhandled rejection" });
+  });
+
+  window.Loop = {
+    lang: lang,
+    theme: theme,
+    /** Pick the string for the current language: Loop.t({ es: "Hola", en: "Hi" }) */
+    t: function (pair) { return pair[lang] || pair.es; },
+    /** Report a meaningful interaction (used for anonymous analytics only). */
+    interaction: function (name) { send("interaction", { name: String(name).slice(0, 40) }); },
+    ready: function () { send("ready"); },
+  };
+})();</script>
+<script>
+(function () {
+  var t = Loop.t;
+  var PHASES = {
+    focus: { seconds: 25 * 60, label: { es: "Foco", en: "Focus" }, color: "var(--phase-focus)" },
+    rest: { seconds: 5 * 60, label: { es: "Pausa", en: "Break" }, color: "var(--phase-break)" }
+  };
+  var C = 2 * Math.PI * 100;
+  var el = function (id) { return document.getElementById(id); };
+  var state = { phase: "focus", remaining: PHASES.focus.seconds, running: false, cycles: 0, endsAt: 0, timer: null };
+
+  el("bar").style.strokeDasharray = C;
+  el("skip").textContent = t({ es: "Saltar", en: "Skip" });
+  el("reset").textContent = t({ es: "Reiniciar", en: "Reset" });
+
+  function fmt(s) { var m = Math.floor(s / 60), r = s % 60; return (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r; }
+
+  function render() {
+    var p = PHASES[state.phase];
+    document.body.style.setProperty("--phase", p.color);
+    el("phase").textContent = t(p.label);
+    el("time").textContent = fmt(state.remaining);
+    el("bar").style.strokeDashoffset = C * (1 - state.remaining / p.seconds);
+    el("toggle").textContent = state.running ? t({ es: "Pausar", en: "Pause" }) : t({ es: "Empezar", en: "Start" });
+    el("cycles").textContent = state.cycles + " " + t(state.cycles === 1 ? { es: "ciclo", en: "cycle" } : { es: "ciclos", en: "cycles" });
+    var dots = el("dots"); dots.innerHTML = "";
+    for (var i = 0; i < Math.min(state.cycles, 8); i++) dots.appendChild(document.createElement("span"));
+  }
+
+  function tick() {
+    state.remaining = Math.max(0, Math.round((state.endsAt - Date.now()) / 1000));
+    if (state.remaining === 0) advance();
+    render();
+  }
+
+  function advance() {
+    if (state.phase === "focus") state.cycles++;
+    state.phase = state.phase === "focus" ? "rest" : "focus";
+    state.remaining = PHASES[state.phase].seconds;
+    state.endsAt = Date.now() + state.remaining * 1000;
+  }
+
+  function stop() { state.running = false; clearInterval(state.timer); }
+
+  el("toggle").addEventListener("click", function () {
+    if (state.running) { stop(); }
+    else {
+      state.running = true;
+      state.endsAt = Date.now() + state.remaining * 1000;
+      state.timer = setInterval(tick, 250);
+      Loop.interaction("start");
+    }
+    render();
+  });
+  el("skip").addEventListener("click", function () {
+    advance(); if (!state.running) state.endsAt = 0;
+    Loop.interaction("skip"); render();
+  });
+  el("reset").addEventListener("click", function () {
+    stop(); state.phase = "focus"; state.remaining = PHASES.focus.seconds; state.cycles = 0; render();
+  });
+
+  render();
+  Loop.ready();
+})();
+</script>
+</body>
+</html>

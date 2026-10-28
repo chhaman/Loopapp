@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dividí la cuenta</title>
+<style>
+/*LOOP_BASE_CSS*/
+body { --accent: #ffb830; }
+label { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.money { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 16px; padding: 12px 16px; }
+.money span { font-size: 28px; font-weight: 800; color: var(--muted); }
+.money input { border: 0; background: transparent; font-size: 32px; font-weight: 800; width: 100%; outline: none; }
+.chips { display: flex; gap: 8px; }
+.chips button { flex: 1; padding: 10px 0; }
+.chips button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.stepper { display: flex; align-items: center; justify-content: space-between; background: var(--surface-2); border-radius: 16px; padding: 6px; }
+.stepper output { font-size: 24px; font-weight: 800; }
+.stepper button { width: 48px; height: 48px; padding: 0; font-size: 22px; background: var(--surface); }
+.result { text-align: center; }
+.result .big { font-size: 48px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.toggle { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; }
+</style>
+</head>
+<body>
+<main class="app card">
+  <div class="field">
+    <label for="total" id="lblTotal"></label>
+    <div class="money"><span>$</span><input id="total" inputmode="decimal" autocomplete="off" placeholder="0"></div>
+  </div>
+  <div class="field">
+    <label id="lblTip"></label>
+    <div class="chips" id="tips" role="group"></div>
+  </div>
+  <div class="field">
+    <label id="lblPeople"></label>
+    <div class="stepper">
+      <button id="minus" aria-label="-">−</button>
+      <output id="people" aria-live="polite">2</output>
+      <button id="plus" aria-label="+">+</button>
+    </div>
+  </div>
+  <div class="result" aria-live="polite">
+    <div class="muted" id="lblEach"></div>
+    <div class="big" id="each">$0</div>
+    <div class="muted" id="detail"></div>
+  </div>
+  <label class="toggle"><input type="checkbox" id="round"> <span id="lblRound"></span></label>
+</main>
+<script>/*LOOP_SDK*/</script>
+<script>
+(function () {
+  var t = Loop.t, el = function (id) { return document.getElementById(id); };
+  var state = { tip: 10, people: 2 };
+  var locale = Loop.lang === "en" ? "en-US" : "es-AR";
+  var fmt = new Intl.NumberFormat(locale, { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+
+  el("lblTotal").textContent = t({ es: "Total de la cuenta", en: "Bill total" });
+  el("lblTip").textContent = t({ es: "Propina", en: "Tip" });
+  el("lblPeople").textContent = t({ es: "Personas", en: "People" });
+  el("lblEach").textContent = t({ es: "Cada persona paga", en: "Each person pays" });
+  el("lblRound").textContent = t({ es: "Redondear hacia arriba", en: "Round up" });
+  el("minus").setAttribute("aria-label", t({ es: "Una persona menos", en: "One less person" }));
+  el("plus").setAttribute("aria-label", t({ es: "Una persona más", en: "One more person" }));
+
+  [0, 10, 15, 20].forEach(function (pct) {
+    var b = document.createElement("button");
+    b.textContent = pct + "%"; b.dataset.pct = pct;
+    b.addEventListener("click", function () { state.tip = pct; Loop.interaction("tip"); render(); });
+    el("tips").appendChild(b);
+  });
+
+  function parseTotal() {
+    var raw = el("total").value.replace(/\s/g, "");
+    // Accept both "1.234,50" and "1,234.50" and plain "1234.5"
+    if (raw.indexOf(",") > -1 && raw.lastIndexOf(",") > raw.lastIndexOf(".")) raw = raw.replace(/\./g, "").replace(",", ".");
+    else raw = raw.replace(/,/g, "");
+    var n = parseFloat(raw);
+    return isFinite(n) && n > 0 ? n : 0;
+  }
+
+  function render() {
+    var total = parseTotal();
+    var withTip = total * (1 + state.tip / 100);
+    var each = state.people > 0 ? withTip / state.people : 0;
+    if (el("round").checked) each = Math.ceil(each);
+    el("each").textContent = "$" + fmt.format(each);
+    el("detail").textContent = t({ es: "Total con propina: ", en: "Total with tip: " }) + "$" + fmt.format(withTip);
+    el("people").textContent = state.people;
+    Array.prototype.forEach.call(el("tips").children, function (b) {
+      b.setAttribute("aria-pressed", String(Number(b.dataset.pct) === state.tip));
+    });
+  }
+
+  el("total").addEventListener("input", function () { render(); });
+  el("total").addEventListener("change", function () { Loop.interaction("total"); });
+  el("minus").addEventListener("click", function () { state.people = Math.max(1, state.people - 1); render(); });
+  el("plus").addEventListener("click", function () { state.people = Math.min(50, state.people + 1); Loop.interaction("people"); render(); });
+  el("round").addEventListener("change", render);
+
+  render();
+  Loop.ready();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dividí la cuenta</title>
+<style>
+:root {
+  --bg: #fbf8f3; --surface: #ffffff; --surface-2: #f3eee6; --line: #e6dfd4;
+  --text: #16131f; --muted: #615b6e; --accent: #ff5a47; --on-accent: #16131f;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0f0d16; --surface: #1a1724; --surface-2: #242031; --line: #322d42;
+  --text: #f4f1ec; --muted: #aaa4b8; --accent: #ff6b59; --on-accent: #16131f;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 16px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  overflow: hidden; user-select: none;
+}
+button, input, select { font: inherit; color: inherit; }
+button {
+  border: 0; border-radius: 999px; padding: 12px 20px; cursor: pointer; font-weight: 700;
+  background: var(--surface-2); transition: transform .12s ease, background .2s ease;
+}
+button:active { transform: scale(.96); }
+button.primary { background: var(--accent); color: var(--on-accent); }
+:focus-visible { outline: 3px solid #7b6cf6; outline-offset: 2px; }
+.muted { color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 20px; }
+.app { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -.02em; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+body { --accent: #ffb830; }
+label { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.money { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 16px; padding: 12px 16px; }
+.money span { font-size: 28px; font-weight: 800; color: var(--muted); }
+.money input { border: 0; background: transparent; font-size: 32px; font-weight: 800; width: 100%; outline: none; }
+.chips { display: flex; gap: 8px; }
+.chips button { flex: 1; padding: 10px 0; }
+.chips button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.stepper { display: flex; align-items: center; justify-content: space-between; background: var(--surface-2); border-radius: 16px; padding: 6px; }
+.stepper output { font-size: 24px; font-weight: 800; }
+.stepper button { width: 48px; height: 48px; padding: 0; font-size: 22px; background: var(--surface); }
+.result { text-align: center; }
+.result .big { font-size: 48px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.toggle { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; }
+</style>
+</head>
+<body>
+<main class="app card">
+  <div class="field">
+    <label for="total" id="lblTotal"></label>
+    <div class="money"><span>$</span><input id="total" inputmode="decimal" autocomplete="off" placeholder="0"></div>
+  </div>
+  <div class="field">
+    <label id="lblTip"></label>
+    <div class="chips" id="tips" role="group"></div>
+  </div>
+  <div class="field">
+    <label id="lblPeople"></label>
+    <div class="stepper">
+      <button id="minus" aria-label="-">−</button>
+      <output id="people" aria-live="polite">2</output>
+      <button id="plus" aria-label="+">+</button>
+    </div>
+  </div>
+  <div class="result" aria-live="polite">
+    <div class="muted" id="lblEach"></div>
+    <div class="big" id="each">$0</div>
+    <div class="muted" id="detail"></div>
+  </div>
+  <label class="toggle"><input type="checkbox" id="round"> <span id="lblRound"></span></label>
+</main>
+<script>/* Loopapp miniapp SDK v1 — inlined into every miniapp at build time.
+ * The miniapp runs in a sandboxed iframe with an opaque origin: no cookies,
+ * no storage, no network. It can only talk to the host through postMessage. */
+(function () {
+  var params = new URLSearchParams(location.search);
+  var lang = params.get("lang") === "en" ? "en" : "es";
+  var theme = params.get("theme") === "light" ? "light" : "dark";
+  document.documentElement.lang = lang;
+  document.documentElement.setAttribute("data-theme", theme);
+
+  function send(type, extra) {
+    var msg = { source: "loop-miniapp", v: 1, type: type };
+    if (extra) for (var k in extra) msg[k] = extra[k];
+    try { window.parent.postMessage(msg, "*"); } catch { /* host unavailable */ }
+  }
+
+  window.addEventListener("error", function (e) {
+    send("error", { message: String((e && e.message) || "error").slice(0, 200) });
+  });
+  window.addEventListener("unhandledrejection", function () {
+    send("error", { message: "unhandled rejection" });
+  });
+
+  window.Loop = {
+    lang: lang,
+    theme: theme,
+    /** Pick the string for the current language: Loop.t({ es: "Hola", en: "Hi" }) */
+    t: function (pair) { return pair[lang] || pair.es; },
+    /** Report a meaningful interaction (used for anonymous analytics only). */
+    interaction: function (name) { send("interaction", { name: String(name).slice(0, 40) }); },
+    ready: function () { send("ready"); },
+  };
+})();</script>
+<script>
+(function () {
+  var t = Loop.t, el = function (id) { return document.getElementById(id); };
+  var state = { tip: 10, people: 2 };
+  var locale = Loop.lang === "en" ? "en-US" : "es-AR";
+  var fmt = new Intl.NumberFormat(locale, { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+
+  el("lblTotal").textContent = t({ es: "Total de la cuenta", en: "Bill total" });
+  el("lblTip").textContent = t({ es: "Propina", en: "Tip" });
+  el("lblPeople").textContent = t({ es: "Personas", en: "People" });
+  el("lblEach").textContent = t({ es: "Cada persona paga", en: "Each person pays" });
+  el("lblRound").textContent = t({ es: "Redondear hacia arriba", en: "Round up" });
+  el("minus").setAttribute("aria-label", t({ es: "Una persona menos", en: "One less person" }));
+  el("plus").setAttribute("aria-label", t({ es: "Una persona más", en: "One more person" }));
+
+  [0, 10, 15, 20].forEach(function (pct) {
+    var b = document.createElement("button");
+    b.textContent = pct + "%"; b.dataset.pct = pct;
+    b.addEventListener("click", function () { state.tip = pct; Loop.interaction("tip"); render(); });
+    el("tips").appendChild(b);
+  });
+
+  function parseTotal() {
+    var raw = el("total").value.replace(/\s/g, "");
+    // Accept both "1.234,50" and "1,234.50" and plain "1234.5"
+    if (raw.indexOf(",") > -1 && raw.lastIndexOf(",") > raw.lastIndexOf(".")) raw = raw.replace(/\./g, "").replace(",", ".");
+    else raw = raw.replace(/,/g, "");
+    var n = parseFloat(raw);
+    return isFinite(n) && n > 0 ? n : 0;
+  }
+
+  function render() {
+    var total = parseTotal();
+    var withTip = total * (1 + state.tip / 100);
+    var each = state.people > 0 ? withTip / state.people : 0;
+    if (el("round").checked) each = Math.ceil(each);
+    el("each").textContent = "$" + fmt.format(each);
+    el("detail").textContent = t({ es: "Total con propina: ", en: "Total with tip: " }) + "$" + fmt.format(withTip);
+    el("people").textContent = state.people;
+    Array.prototype.forEach.call(el("tips").children, function (b) {
+      b.setAttribute("aria-pressed", String(Number(b.dataset.pct) === state.tip));
+    });
+  }
+
+  el("total").addEventListener("input", function () { render(); });
+  el("total").addEventListener("change", function () { Loop.interaction("total"); });
+  el("minus").addEventListener("click", function () { state.people = Math.max(1, state.people - 1); render(); });
+  el("plus").addEventListener("click", function () { state.people = Math.min(50, state.people + 1); Loop.interaction("people"); render(); });
+  el("round").addEventListener("change", render);
+
+  render();
+  Loop.ready();
+})();
+</script>
+</body>
+</html>

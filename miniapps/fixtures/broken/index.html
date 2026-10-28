@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Broken fixture</title><style>/*LOOP_BASE_CSS*/</style></head>
+<body>
+<main class="app"><h1>Broken</h1></main>
+<script>/*LOOP_SDK*/</script>
+<script>
+// Test fixture (TC-005): loads, then throws an uncaught exception.
+Loop.ready();
+setTimeout(function () { throw new Error("fixture exploded"); }, 50);
+</script>
+</body>
+</html>

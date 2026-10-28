@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Escape fixture</title><style>/*LOOP_BASE_CSS*/</style></head>
+<body>
+<main class="app"><h1>Escape attempt</h1><pre id="out"></pre></main>
+<script>/*LOOP_SDK*/</script>
+<script>
+// Test fixture (TC-004 / RF-012): tries to reach privileged host data.
+// Reports "escape-blocked" only if every attempt fails.
+(async function () {
+  var leaks = [];
+  function attempt(name, fn) { try { var v = fn(); if (v !== undefined && v !== null) leaks.push(name); } catch (e) { /* blocked */ } }
+  attempt("parent-document", function () { return window.parent.document.cookie; });
+  attempt("top-location", function () { return window.top.location.href; });
+  attempt("own-cookie", function () { return document.cookie; });
+  attempt("local-storage", function () { return window.localStorage.getItem("x") === null ? "readable" : "readable"; });
+  attempt("session-storage", function () { return window.sessionStorage.length; });
+  try {
+    var res = await fetch("/api/events", { method: "POST", credentials: "include", body: "{}" });
+    leaks.push("network:" + res.status);
+  } catch (e) { /* blocked by CSP / CORS */ }
+  document.getElementById("out").textContent = leaks.length ? leaks.join("\n") : "blocked";
+  Loop.interaction(leaks.length ? "escape-leaked-" + leaks[0].replace(/[^a-z0-9-]/gi, "") : "escape-blocked");
+  Loop.ready();
+})();
+</script>
+</body>
+</html>

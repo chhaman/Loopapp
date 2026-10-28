@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Broken fixture</title><style>:root {
+  --bg: #fbf8f3; --surface: #ffffff; --surface-2: #f3eee6; --line: #e6dfd4;
+  --text: #16131f; --muted: #615b6e; --accent: #ff5a47; --on-accent: #16131f;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0f0d16; --surface: #1a1724; --surface-2: #242031; --line: #322d42;
+  --text: #f4f1ec; --muted: #aaa4b8; --accent: #ff6b59; --on-accent: #16131f;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 16px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  overflow: hidden; user-select: none;
+}
+button, input, select { font: inherit; color: inherit; }
+button {
+  border: 0; border-radius: 999px; padding: 12px 20px; cursor: pointer; font-weight: 700;
+  background: var(--surface-2); transition: transform .12s ease, background .2s ease;
+}
+button:active { transform: scale(.96); }
+button.primary { background: var(--accent); color: var(--on-accent); }
+:focus-visible { outline: 3px solid #7b6cf6; outline-offset: 2px; }
+.muted { color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 20px; }
+.app { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -.02em; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }</style></head>
+<body>
+<main class="app"><h1>Broken</h1></main>
+<script>/* Loopapp miniapp SDK v1 — inlined into every miniapp at build time.
+ * The miniapp runs in a sandboxed iframe with an opaque origin: no cookies,
+ * no storage, no network. It can only talk to the host through postMessage. */
+(function () {
+  var params = new URLSearchParams(location.search);
+  var lang = params.get("lang") === "en" ? "en" : "es";
+  var theme = params.get("theme") === "light" ? "light" : "dark";
+  document.documentElement.lang = lang;
+  document.documentElement.setAttribute("data-theme", theme);
+
+  function send(type, extra) {
+    var msg = { source: "loop-miniapp", v: 1, type: type };
+    if (extra) for (var k in extra) msg[k] = extra[k];
+    try { window.parent.postMessage(msg, "*"); } catch { /* host unavailable */ }
+  }
+
+  window.addEventListener("error", function (e) {
+    send("error", { message: String((e && e.message) || "error").slice(0, 200) });
+  });
+  window.addEventListener("unhandledrejection", function () {
+    send("error", { message: "unhandled rejection" });
+  });
+
+  window.Loop = {
+    lang: lang,
+    theme: theme,
+    /** Pick the string for the current language: Loop.t({ es: "Hola", en: "Hi" }) */
+    t: function (pair) { return pair[lang] || pair.es; },
+    /** Report a meaningful interaction (used for anonymous analytics only). */
+    interaction: function (name) { send("interaction", { name: String(name).slice(0, 40) }); },
+    ready: function () { send("ready"); },
+  };
+})();</script>
+<script>
+// Test fixture (TC-005): loads, then throws an uncaught exception.
+Loop.ready();
+setTimeout(function () { throw new Error("fixture exploded"); }, 50);
+</script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+/*
+ * Loopapp brand tokens — see docs/brand.md.
+ * Theme is chosen by the `data-theme` attribute on <html>:
+ *   "light" | "dark" | "system" (follows prefers-color-scheme).
+ */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  /* Brand palette (theme independent) */
+  --brand-coral: #ff5a47;
+  --brand-ink: #16131f;
+  --brand-paper: #fbf8f3;
+  --brand-mint: #22c59a;
+  --brand-sun: #ffb830;
+  --brand-iris: #7b6cf6;
+
+  /* Light theme (default) */
+  --bg: #fbf8f3;
+  --surface: #ffffff;
+  --surface-2: #f3eee6;
+  --border: #e6dfd4;
+  --text: #16131f;
+  --text-muted: #615b6e;
+  --accent: #ff5a47;
+  --accent-text: #16131f;
+  --accent-strong: #c93422;
+  --success: #12825f;
+  --danger: #c42b2b;
+  --focus: #7b6cf6;
+  --overlay: rgba(22, 19, 31, 0.55);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f0d16;
+  --surface: #1a1724;
+  --surface-2: #242031;
+  --border: #322d42;
+  --text: #f4f1ec;
+  --text-muted: #aaa4b8;
+  --accent: #ff6b59;
+  --accent-text: #16131f;
+  --accent-strong: #ff8a7c;
+  --success: #3ddbb0;
+  --danger: #ff7a7a;
+  --focus: #a99ffb;
+  --overlay: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    --bg: #0f0d16;
+    --surface: #1a1724;
+    --surface-2: #242031;
+    --border: #322d42;
+    --text: #f4f1ec;
+    --text-muted: #aaa4b8;
+    --accent: #ff6b59;
+    --accent-text: #16131f;
+    --accent-strong: #ff8a7c;
+    --success: #3ddbb0;
+    --danger: #ff7a7a;
+    --focus: #a99ffb;
+    --overlay: rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--accent-text);
+  --color-accent-strong: var(--accent-strong);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-coral: var(--brand-coral);
+  --color-ink: var(--brand-ink);
+  --color-paper: var(--brand-paper);
+  --color-mint: var(--brand-mint);
+  --color-sun: var(--brand-sun);
+  --color-iris: var(--brand-iris);
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-face), var(--font-body), ui-sans-serif,
+    system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.feed-scroll {
+  scroll-snap-type: y mandatory;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+.feed-scroll::-webkit-scrollbar {
+  display: none;
+}
+.feed-item {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
